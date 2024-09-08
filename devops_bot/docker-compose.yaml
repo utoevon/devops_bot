@@ -1,0 +1,31 @@
+services:
+  bot_image:
+    container_name: bot_image
+    build: ./code
+    volumes: 
+      - logs-volume:/var/log/postgresql
+    env_file: .env
+  db_image:
+    container_name: db_image
+    build: ./database_master
+    ports:
+    - 5433:5432
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PG_REP_USER: ${DB_REPL_USER}
+      PG_REP_PASSWORD: ${DB_REPL_PASSWORD}
+    volumes:
+      - ./database_master/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - logs-volume:/var/log/postgresql
+  db_repl_image:
+    container_name: db_repl_image
+    build: ./database_slave
+    environment:
+      PGUSER: ${DB_REPL_USER}
+      PGPASSWORD: ${DB_REPL_PASSWORD}
+    depends_on:
+      - db_image
+volumes:
+  logs-volume:
