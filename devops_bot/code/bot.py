@@ -351,13 +351,12 @@ def getAptList(update: Update, context):
 
 def getReplLogs(update: Update, context):
     update.message.reply_text("Вывод логов о репликации")
-    #resultFile(os.system(COMMANDS["get_repl_logs"]), "resultRepl")
-    
-    result = subprocess.check_output(COMMANDS["get_repl_logs"], shell=True, text=True, encoding='utf-8')
-    
-    logging.debug("результат обработки:\n{}".format(result))
-    
-    resultFile(result, "resultRepl")
+
+    #result = subprocess.check_output(COMMANDS["get_repl_logs"], shell=True, text=True, encoding='utf-8')
+    resultFile(connectAndExecCommands("get_repl_logs"), "resultRepl")
+    context.bot.send_document(
+        update.message.chat.id, document=open("resultRepl.txt", "rb")
+    )
     context.bot.send_document(
         update.message.chat.id, document=open("resultRepl.txt", "rb")
     )

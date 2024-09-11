@@ -1,0 +1,111 @@
+---
+- name: InstallPostgres
+  hosts: pg_cluster
+  tasks:
+  - name: Add PostgreSQL apt key
+    apt_key:
+      url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+  - name: Add PostgreSQL repository
+    apt_repository:
+ 	  # ansible_distribution_release = xenial, bionic, focal
+      repo: "deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
+  - name: Install PostgreSQL 14
+    apt:
+      name: postgresql-14
+      update_cache: yes
+      
+- name: Copy Config Master
+  hosts: pg_master
+  tasks:
+    - name: Copy database configuration
+      template:
+        src: ./master/postgresql.conf
+        dest: /etc/postgresql/14/main/postgresql.conf
+        group: postgres
+        mode: '0644'
+        owner: postgres
+      notify:
+        - restart postgres
+
+    - name: Copy user access configuration
+      template:
+        src: ../master/pg_hba.conf
+        dest: /etc/postgresql/14/main/pg_hba.conf
+        group: postgres
+        mode: '0640'
+        owner: postgres
+      notify:
+        - restart postgres
+
+    - name: add database
+      become: yes
+      become_user: postgres
+      postgresql_db:
+        name: db_phone_email
+        state: present
+        login_user: postgres
+    - name: Run init.sql
+      become: yes
+      become_user: postgres
+      command: psql db_phone_email -f init.sql
+  handlers:
+    - name: restart postgres
+      service:
+        name: postgresql
+        state: restarted
+
+
+- name: Configure PostgreSQL for replication
+  hosts: pg_slave
+  tasks:
+    - name: Copy database configuration
+      template:
+        src: ../slave/postgresql.conf
+        dest: /etc/postgresql/14/main/postgresql.conf
+        group: postgres
+        mode: '0644'
+        owner: postgres
+      notify:
+        - restart postgres
+    - name: Copy user access configuration
+      template:
+        src: ./slave/pg_hba.conf
+        dest: /etc/postgresql/14/main/pg_hba.conf
+        group: postgres
+        mode: '0640'
+        owner: postgres
+      notify:
+        - restart postgres
+
+    - name: Stop PostgreSQL service
+      service:
+        name: postgresql
+        state: stopped
+
+    - name: Clean replica directory
+      file:
+        path: /var/lib/postgresql/14/main
+        state: absent
+      when: inventory_hostname != groups['pg_cluster'][0]
+
+    - name: Start PostgreSQL service
+      service:
+        name: postgresql
+        state: started 
+
+    - name: Test replication configuration
+      become: yes
+      become_user: repl_user
+      command: pg_basebackup -h {{ pg_master }} -D /var/lib/postgresql/14/main -P -U replication -v -W
+      environment:
+        PGPASSWORD: "P@ssw0rd"
+      ignore_errors: yes
+      register: pg_basebackup_result
+      until: pg_basebackup_result.rc == 0
+      retries: 5
+      delay: 5
+  handlers:
+    - name: restart postgres
+      service:
+        name: postgresql
+        state: restarted
