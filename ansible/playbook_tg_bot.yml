@@ -7,14 +7,13 @@
       url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
   - name: Add PostgreSQL repository
     apt_repository:
- 	  # ansible_distribution_release = xenial, bionic, focal
       repo: "deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
   - name: Install PostgreSQL 14
     apt:
       name: postgresql-14
       update_cache: yes
       
-- name: Copy Config Master
+- name: Configure PostgreSQL Master
   hosts: pg_master
   tasks:
     - name: Copy database configuration
@@ -29,7 +28,7 @@
 
     - name: Copy user access configuration
       template:
-        src: ../master/pg_hba.conf
+        src: ./master/pg_hba.conf
         dest: /etc/postgresql/14/main/pg_hba.conf
         group: postgres
         mode: '0640'
@@ -60,7 +59,7 @@
   tasks:
     - name: Copy database configuration
       template:
-        src: ../slave/postgresql.conf
+        src: ./slave/postgresql.conf
         dest: /etc/postgresql/14/main/postgresql.conf
         group: postgres
         mode: '0644'
@@ -104,8 +103,75 @@
       until: pg_basebackup_result.rc == 0
       retries: 5
       delay: 5
+      
   handlers:
     - name: restart postgres
       service:
         name: postgresql
         state: restarted
+
+- name: Bot
+  hosts: bot_server
+  tasks:
+  - name: Create user
+    user:
+      name: bot_runner
+      state: present
+      create_home: yes
+      home: /home/bot_runner
+      shell: /bin/bash
+      password: "P@ssw0rd"
+      password_lock: no
+  
+  - name: Install python
+    apt:
+      name: python3
+      state: present
+
+
+  - name: Install pip
+    apt:
+      name: python3-pip
+      state: present
+
+      
+  - name: Clone repository with Python script
+    git:
+     repo: 'https://github.com/utoevon/devops_bot.git'
+     dest: /tmp/repo_bot
+     clone: yes
+     version: ansible
+
+  - name: Copy Python script to bot server
+    copy:
+      src: /tmp/repo_bot/{{ item }}
+      dest: /home/bot_runner
+      owner: bot_runner
+      group: bot_runner
+      remote_src: yes
+    with_items:
+      - /tmp/repo_bot/devops_bot/code/bot.py
+      - /tmp/repo_bot/devops_bot/code/requirements.txt
+
+  - name: Install from requirements.txt
+    command: pip3 install -r /home/bot_runner/requirements.txt
+    become_user: bot_runner
+  
+  - name: Копирование .env файла
+    set_fact:
+      env_vars: "{{ lookup('file', '.env').splitlines() }}"
+
+  - name: Install ens_vars .env
+    lineinfile:
+      path: /home/bot_runner/.env
+      line: "{{ item }}"
+    with_items: "{{ env_vars }}"
+
+  - name: Run bot.py
+    command: nohup python3 /home/bot_runner/bot.py &
+    become_user: bot_runner
+    args:
+      creates: /home/bot_runner/bot.py.pid
+  
+
+
