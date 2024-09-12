@@ -32,7 +32,7 @@ COMMANDS = {
     "get_apt_list": "apt list --installed",
     "get_dpkg_package": "dpkg --list | grep {}",
     "get_services": "systemctl list-units --type service",
-    "get_repl_logs": "cat /var/log/postgresql/postgresql.log | grep -P 'repl_user'",
+    "get_repl_logs": "cat /var/log/postgresql/postgresql-14-main.log | grep -P 'repl_user'",
 }
 
 SQL_QUERIES = {
@@ -354,9 +354,7 @@ def getReplLogs(update: Update, context):
 
     #result = subprocess.check_output(COMMANDS["get_repl_logs"], shell=True, text=True, encoding='utf-8')
     resultFile(connectAndExecCommands("get_repl_logs"), "resultRepl")
-    context.bot.send_document(
-        update.message.chat.id, document=open("resultRepl.txt", "rb")
-    )
+ 
     context.bot.send_document(
         update.message.chat.id, document=open("resultRepl.txt", "rb")
     )
