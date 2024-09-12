@@ -66,6 +66,13 @@
       become: yes
       become_user: postgres
       command: psql -U postgres -d db_phone_email -f /home/init.sql
+
+    - name: set directory and file permissions
+      file:
+        path: /var/log/postgresql
+        recurse: yes
+        mode: "0755"
+
   handlers:
     - name: restart postgres
       service:
@@ -107,7 +114,7 @@
       
     - name: Test replication configuration
       become: yes
-      become_user: repl_user
+      become_user: postgres
       command: pg_basebackup -R -h 192.168.194.130 -U repl_user -D /var/lib/postgresql/14/main -P
       environment:
         PGPASSWORD: "P@ssw0rd"
