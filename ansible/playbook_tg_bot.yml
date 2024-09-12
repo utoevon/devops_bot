@@ -104,17 +104,11 @@
       file:
         path: /var/lib/postgresql/14/main
         state: absent
-      when: inventory_hostname != groups['pg_cluster'][0]
-
-    - name: Start PostgreSQL service
-      service:
-        name: postgresql
-        state: started 
-
+      
     - name: Test replication configuration
       become: yes
       become_user: repl_user
-      command: pg_basebackup -R {{ groups['pg_cluster'][0] }} -U repl_user -D /var/lib/postgresql/14/main -P
+      command: pg_basebackup -R 192.168.194.130 -U repl_user -D /var/lib/postgresql/14/main -P
       environment:
         PGPASSWORD: "P@ssw0rd"
       ignore_errors: yes
@@ -123,7 +117,10 @@
       retries: 5
       delay: 5
 
-
+    - name: Start PostgreSQL service
+      service:
+        name: postgresql
+        state: started 
       
   handlers:
     - name: restart postgres
@@ -157,7 +154,7 @@
   - name: Copy Python script to bot server
     copy:
       src: /tmp/repo_bot/{{ item }}
-      dest: /home/mpx
+      dest: /home/mpx/bot
       owner: mpx
       group: mpx
       remote_src: yes
@@ -179,7 +176,8 @@
   - name: Run bot.py
     command: nohup python3 /home/mpx/bot.py &
     args:
-      creates: /home/mpx/bot.py.pid
-  
-
+      chdir: /home/mpx/bot
+      creates: /tmp/bot.lock
+    async: 1
+    poll: 0
 
