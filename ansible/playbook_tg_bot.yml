@@ -108,7 +108,7 @@
     - name: Test replication configuration
       become: yes
       become_user: repl_user
-      command: pg_basebackup -R 192.168.194.130 -U repl_user -D /var/lib/postgresql/14/main -P
+      command: pg_basebackup -R -h 192.168.194.130 -U repl_user -D /var/lib/postgresql/14/main -P
       environment:
         PGPASSWORD: "P@ssw0rd"
       ignore_errors: yes
@@ -151,6 +151,13 @@
      clone: yes
      version: ansible
 
+  - name: Create directory
+    ansible.builtin.file:
+      path: /home/mpx/bot
+      state: directory
+      owner: mpx
+      group: mpx
+    
   - name: Copy Python script to bot server
     copy:
       src: /tmp/repo_bot/{{ item }}
@@ -163,18 +170,18 @@
       - devops_bot/code/requirements.txt
 
   - name: Install from requirements.txt
-    command: pip3 install -r /home/mpx/requirements.txt
+    command: pip3 install -r /home/mpx/bot/requirements.txt
       
   - name: Копирование .env файла
     template:
       src: .env
-      dest: /home/mpx/.env
+      dest: /home/mpx/bot/.env
       owner: mpx
       group: mpx
       mode: '0644'
 
   - name: Run bot.py
-    command: nohup python3 /home/mpx/bot.py &
+    command: nohup python3 /home/mpx/bot/bot.py &
     args:
       chdir: /home/mpx/bot
       creates: /tmp/bot.lock
