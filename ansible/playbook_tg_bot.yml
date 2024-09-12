@@ -36,6 +36,19 @@
       notify:
         - restart postgres
 
+    - name: Install python
+      apt:
+        name: python3
+        state: present
+    - name: Install pip
+      apt:
+        name: python3-pip
+        state: present
+    - name: Make sure psycopg2 is installed
+      pip:
+        name: psycopg2-binary
+        state: present
+
     - name: add database
       become: yes
       become_user: postgres
@@ -43,10 +56,16 @@
         name: db_phone_email
         state: present
         login_user: postgres
+
+    - name: Copy init.sql
+      template:
+        src: ./master/init.sql
+        dest: /home/init.sql
+
     - name: Run init.sql
       become: yes
       become_user: postgres
-      command: psql db_phone_email -f init.sql
+      command: psql -U postgres -d db_phone_email -f /home/init.sql
   handlers:
     - name: restart postgres
       service:
@@ -95,7 +114,7 @@
     - name: Test replication configuration
       become: yes
       become_user: repl_user
-      command: pg_basebackup -h {{ pg_master }} -D /var/lib/postgresql/14/main -P -U replication -v -W
+      command: pg_basebackup -R {{ groups['pg_cluster'][0] }} -U repl_user -D /var/lib/postgresql/14/main -P
       environment:
         PGPASSWORD: "P@ssw0rd"
       ignore_errors: yes
@@ -103,6 +122,8 @@
       until: pg_basebackup_result.rc == 0
       retries: 5
       delay: 5
+
+
       
   handlers:
     - name: restart postgres
@@ -113,15 +134,6 @@
 - name: Bot
   hosts: bot_server
   tasks:
-  - name: Create user
-    user:
-      name: bot_runner
-      state: present
-      create_home: yes
-      home: /home/bot_runner
-      shell: /bin/bash
-      password: "P@ssw0rd"
-      password_lock: no
   
   - name: Install python
     apt:
@@ -145,33 +157,29 @@
   - name: Copy Python script to bot server
     copy:
       src: /tmp/repo_bot/{{ item }}
-      dest: /home/bot_runner
-      owner: bot_runner
-      group: bot_runner
+      dest: /home/mpx
+      owner: mpx
+      group: mpx
       remote_src: yes
     with_items:
-      - /tmp/repo_bot/devops_bot/code/bot.py
-      - /tmp/repo_bot/devops_bot/code/requirements.txt
+      - devops_bot/code/bot.py
+      - devops_bot/code/requirements.txt
 
   - name: Install from requirements.txt
-    command: pip3 install -r /home/bot_runner/requirements.txt
-    become_user: bot_runner
-  
+    command: pip3 install -r /home/mpx/requirements.txt
+      
   - name: Копирование .env файла
-    set_fact:
-      env_vars: "{{ lookup('file', '.env').splitlines() }}"
-
-  - name: Install ens_vars .env
-    lineinfile:
-      path: /home/bot_runner/.env
-      line: "{{ item }}"
-    with_items: "{{ env_vars }}"
+    template:
+      src: .env
+      dest: /home/mpx/.env
+      owner: mpx
+      group: mpx
+      mode: '0644'
 
   - name: Run bot.py
-    command: nohup python3 /home/bot_runner/bot.py &
-    become_user: bot_runner
+    command: nohup python3 /home/mpx/bot.py &
     args:
-      creates: /home/bot_runner/bot.py.pid
+      creates: /home/mpx/bot.py.pid
   
 
 

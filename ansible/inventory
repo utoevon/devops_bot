@@ -1,5 +1,5 @@
 [pg_cluster]
-pg_master ansible_host=192.168.194.150 ansible_user=mpx ansible_password=P@ssw0rd
+pg_master ansible_host=192.168.194.130 ansible_user=mpx ansible_password=P@ssw0rd
 pg_slave ansible_host=192.168.194.160 ansible_user=mpx ansible_password=P@ssw0rd
 
 [bot]

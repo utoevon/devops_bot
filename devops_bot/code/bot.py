@@ -14,7 +14,7 @@ from telegram.ext import (
     Filters,
     ConversationHandler,
 )
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
 
 COMMANDS = {
@@ -380,11 +380,11 @@ def resultFile(resultCommand, filename):
 
 
 def connectAndExecCommands(command, grep=""):
-    #load_dotenv()
-    host = os.environ.get("RM_HOST")
-    port = os.environ.get("RM_PORT")
-    username = os.environ.get("RM_USER")
-    password = os.environ.get("RM_PASSWORD")
+    load_dotenv()
+    host = os.getenv("RM_HOST")
+    port = os.getenv("RM_PORT")
+    username = os.getenv("RM_USER")
+    password = os.getenv("RM_PASSWORD")
     try:
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -436,12 +436,12 @@ def getPhonesFromDB(update: Update, context):
 
 
 def connectDBAndSelectQuery(command):
-    #load_dotenv()
-    dbHost = os.environ.get("DB_HOST")
-    dbPort = os.environ.get("DB_PORT")
-    dbUsername = os.environ.get("DB_USER")
-    dbPassword = os.environ.get("DB_PASSWORD")
-    dbName = os.environ.get("DB_DATABASE")
+    load_dotenv()
+    dbHost = os.getenv("DB_HOST")
+    dbPort = os.getenv("DB_PORT")
+    dbUsername = os.getenv("DB_USER")
+    dbPassword = os.getenv("DB_PASSWORD")
+    dbName = os.getenv("DB_DATABASE")
     connection = None
 
     try:
@@ -466,12 +466,12 @@ def connectDBAndSelectQuery(command):
 
 
 def connectDBAndInsertQuery(command):
-    #load_dotenv()
-    dbHost = os.environ.get("DB_HOST")
-    dbPort = os.environ.get("DB_PORT")
-    dbUsername = os.environ.get("DB_USER")
-    dbPassword = os.environ.get("DB_PASSWORD")
-    dbName = os.environ.get("DB_DATABASE")
+    load_dotenv()
+    dbHost = os.getenv("DB_HOST")
+    dbPort = os.getenv("DB_PORT")
+    dbUsername = os.getenv("DB_USER")
+    dbPassword = os.getenv("DB_PASSWORD")
+    dbName = os.getenv("DB_DATABASE")
     connection = None
     try:
         connection = psycopg2.connect(
@@ -500,8 +500,8 @@ def echo(update: Update, context):
 
 
 def main():
-    #load_dotenv()
-    TOKEN = os.environ.get("TOKEN")
+    load_dotenv(find_dotenv())
+    TOKEN = os.getenv("TOKEN")
     updater = Updater(TOKEN, use_context=True)
 
     # Получаем диспетчер для регистрации обработчиков
